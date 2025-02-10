@@ -8,6 +8,7 @@ import (
 
 	"github.com/aalperen0/portfolio-tracker/config"
 	"github.com/aalperen0/portfolio-tracker/internal/api/handlers"
+	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
 )
 
@@ -15,6 +16,13 @@ func main() {
 
 	cfg := config.LoadConfig()
 	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+
+	db, err := config.InitDB(cfg)
+	if err != nil {
+		logger.Fatal().Err(err)
+	}
+	defer db.Close()
+	logger.Info().Msg("database connection pool established")
 
 	handler := handlers.NewHandler(cfg, logger)
 	mux := http.NewServeMux()
@@ -30,7 +38,7 @@ func main() {
 
 	logger.Info().Msgf("starting %s server on %s", cfg.Env, srv.Addr)
 
-	err := srv.ListenAndServe()
+	err = srv.ListenAndServe()
 	logger.Fatal().Err(err)
 
 }

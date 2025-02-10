@@ -22,7 +22,7 @@ type envelope map[string]any
 // / # Returns
 // / - error: Returns an error if retrieved id is invalid, otherwise returns nil
 
-func (h *Handler) readID(r *http.Request) (int64, error) {
+func (h *Handler) readIDParam(r *http.Request) (int64, error) {
 	params := httprouter.ParamsFromContext(r.Context())
 	id, err := strconv.ParseInt(params.ByName("id"), 10, 64)
 	if err != nil {

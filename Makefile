@@ -7,7 +7,7 @@ include .env
 
 # =====================================================================================
 
-## help: print this help message
+## help: to get information print this help message with 'make help'
 .PHONY: help
 help:
 	@echo 'Usage: '
@@ -45,21 +45,44 @@ run/api:
 	@go run ./cmd/app/main.go
 
 
-## docker/up: docker compose up
 
+## docker/up: docker compose up
 .PHONY: docker/up
 docker/up:
 	@echo 'Starting Application...'
 	@docker compose up --build
 
-## docker/down: docker compose down
 
+## docker/down: docker compose down
 .PHONY: docker/down
 docker/down:
 	@echo 'Stopping Application...'
 	@docker compose down 
 
 
+## db/migrations/new: create a new database migration
+.PHONY: db/migrations/new
+db/migrations/new:
+	@echo "Creating migration files for ${name}..."
+	migrate create -seq -ext sql -dir ./migrations ${name}
+
+.PHONY: seq
+seq:
+	@echo xxx
+	@env $$(grep -v "^#" .env | xargs)
+
+
+## db/migrations/up: apply all up database migrations
+.PHONY: db/migrations/up
+db/migrations/up:
+	@echo "Running up migrations..."
+	@env $$(grep -v '^#' .env | xargs) sh -c 'echo "DB_DSN=$$DB_DSN"; migrate -path=./migrations -database "$$DB_DSN" up'
+
+## db/migrations/down: apply all down database migrations
+.PHONY: db/migrations/down
+db/migrations/down:
+	@echo "Down version of migrations..."
+	@env $$(grep -v '^#' .env | xargs) sh -c 'echo "DB_DSN=$$DB_DSN"; migrate -path=./migrations -database "$$DB_DSN" down 1'
 
 
 # ============================================================================== #

@@ -51,7 +51,7 @@ func (h *Handler) badRequestResponse(w http.ResponseWriter, r *http.Request, err
 // / The notFoundResponse() method will be used to send a 404 Not Found
 // / status code and  JSON response to the client.
 func (h *Handler) notFoundResponse(w http.ResponseWriter, r *http.Request) {
-	msg := "the requesfed resource could not be found"
+	msg := "the requested resource could not be found"
 	h.errorResponse(w, r, http.StatusInternalServerError, msg)
 }
 
