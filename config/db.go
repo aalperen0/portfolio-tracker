@@ -15,7 +15,7 @@ import (
 // / - db: Returns db driver
 // / - error: Returns error if connection couldnt established.
 
-func InitDB(cfg Config) (*sql.DB, error) {
+func InitDB(cfg *Config) (*sql.DB, error) {
 	db, err := sql.Open("postgres", cfg.DB.dsn)
 	if err != nil {
 		return nil, err

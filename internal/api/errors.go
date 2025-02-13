@@ -1,4 +1,4 @@
-package handlers
+package api
 
 import (
 	"fmt"
@@ -60,4 +60,11 @@ func (h *Handler) notFoundResponse(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) methodNotAllowedResponse(w http.ResponseWriter, r *http.Request) {
 	msg := fmt.Sprintf("the %s method is not supported by the resource", r.Method)
 	h.errorResponse(w, r, http.StatusMethodNotAllowed, msg)
+}
+
+// / The failedValidationResponse() method will be used to send a 422
+// / status code and JSON response to the client due to
+// / validation process encountered with a problem.
+func (h *Handler) failedValidationResponse(w http.ResponseWriter, r *http.Request, errors map[string]string) {
+	h.errorResponse(w, r, http.StatusUnprocessableEntity, errors)
 }

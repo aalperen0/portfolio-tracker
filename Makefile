@@ -15,7 +15,7 @@ help:
 
 .PHONY: confirm
 confirm:
-	@echo -n 'Are you sure? [y/N] ' && read ans && [ $${ans:-N} = y] 
+	@echo -n 'Are you sure? [y/N] ' && read ans && [ $${ans:-N} = y ] 
 
 
 # =====================================================================================
@@ -50,7 +50,7 @@ run/api:
 .PHONY: docker/up
 docker/up:
 	@echo 'Starting Application...'
-	@docker compose up --build
+	@docker compose up --build -d
 
 
 ## docker/down: docker compose down
@@ -59,6 +59,12 @@ docker/down:
 	@echo 'Stopping Application...'
 	@docker compose down 
 
+## docker/db: open db in terminal
+.PHONY: docker/db
+docker/db:
+	@echo "Opening db from terminal..."
+	docker compose exec postgres psql -U ptracker -d ptracker
+
 
 ## db/migrations/new: create a new database migration
 .PHONY: db/migrations/new
@@ -66,23 +72,19 @@ db/migrations/new:
 	@echo "Creating migration files for ${name}..."
 	migrate create -seq -ext sql -dir ./migrations ${name}
 
-.PHONY: seq
-seq:
-	@echo xxx
-	@env $$(grep -v "^#" .env | xargs)
-
 
 ## db/migrations/up: apply all up database migrations
 .PHONY: db/migrations/up
 db/migrations/up:
 	@echo "Running up migrations..."
-	@env $$(grep -v '^#' .env | xargs) sh -c 'echo "DB_DSN=$$DB_DSN"; migrate -path=./migrations -database "$$DB_DSN" up'
+	docker run -v /home/aalprn/dev/portfolio-tracker/migrations:/migrations --network host --env-file .env migrate/migrate -path=/migrations/ -database "${DB_DSN_ZD}" up
 
-## db/migrations/down: apply all down database migrations
+
+## db/migrations/down: apply down database migrations
 .PHONY: db/migrations/down
-db/migrations/down:
+db/migrations/down: confirm
 	@echo "Down version of migrations..."
-	@env $$(grep -v '^#' .env | xargs) sh -c 'echo "DB_DSN=$$DB_DSN"; migrate -path=./migrations -database "$$DB_DSN" down 1'
+	docker run -v /home/aalprn/dev/portfolio-tracker/migrations:/migrations --network host --env-file .env migrate/migrate -path=/migrations/ -database "${DB_DSN_ZD}" down 1
 
 
 # ============================================================================== #

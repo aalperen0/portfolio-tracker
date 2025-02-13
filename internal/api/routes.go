@@ -1,4 +1,4 @@
-package handlers
+package api
 
 import (
 	"net/http"
@@ -18,5 +18,6 @@ func (h *Handler) Routes() *httprouter.Router {
 	router.MethodNotAllowed = http.HandlerFunc(h.methodNotAllowedResponse)
 
 	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", h.HealthCheckHandler)
+	router.HandlerFunc(http.MethodPost, "/v1/users", h.registerUserHandler)
 	return router
 }

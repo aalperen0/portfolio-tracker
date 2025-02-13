@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/aalperen0/portfolio-tracker/config"
-	"github.com/aalperen0/portfolio-tracker/internal/api/handlers"
+	"github.com/aalperen0/portfolio-tracker/internal/api"
+	"github.com/aalperen0/portfolio-tracker/internal/model"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
 )
@@ -21,12 +22,20 @@ func main() {
 	if err != nil {
 		logger.Fatal().Err(err)
 	}
+
+	models, err := model.NewModels(db)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to initalize models")
+
+	}
+
 	defer db.Close()
 	logger.Info().Msg("database connection pool established")
 
-	handler := handlers.NewHandler(cfg, logger)
-	mux := http.NewServeMux()
-	mux.HandleFunc("/v1/healthcheck", handler.HealthCheckHandler)
+	handler := api.NewHandler(*cfg, logger, models)
+
+	//	mux := http.NewServeMux()
+	//mux.HandleFunc("/v1/healthcheck", handler.HealthCheckHandler)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
