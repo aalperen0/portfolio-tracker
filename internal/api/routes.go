@@ -10,7 +10,7 @@ import (
 // / endpoints using the HandlerFunc() method.
 // / # Return
 // / - Returns httprouter instance.
-func (h *Handler) Routes() *httprouter.Router {
+func (h *Handler) Routes() http.Handler {
 
 	router := httprouter.New()
 
@@ -19,5 +19,6 @@ func (h *Handler) Routes() *httprouter.Router {
 
 	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", h.HealthCheckHandler)
 	router.HandlerFunc(http.MethodPost, "/v1/users", h.registerUserHandler)
-	return router
+
+	return h.recoverPanic(router)
 }

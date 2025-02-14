@@ -8,6 +8,7 @@ import (
 
 	"github.com/aalperen0/portfolio-tracker/config"
 	"github.com/aalperen0/portfolio-tracker/internal/api"
+	"github.com/aalperen0/portfolio-tracker/internal/mail"
 	"github.com/aalperen0/portfolio-tracker/internal/model"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
@@ -28,11 +29,12 @@ func main() {
 		logger.Fatal().Err(err).Msg("failed to initalize models")
 
 	}
-
 	defer db.Close()
 	logger.Info().Msg("database connection pool established")
 
-	handler := api.NewHandler(*cfg, logger, models)
+	mailer := mail.New(cfg.Smtp.Host, cfg.Smtp.Port, cfg.Smtp.Username, cfg.Smtp.Password, cfg.Smtp.Sender)
+
+	handler := api.NewHandler(*cfg, logger, models, mailer)
 
 	//	mux := http.NewServeMux()
 	//mux.HandleFunc("/v1/healthcheck", handler.HealthCheckHandler)

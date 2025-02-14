@@ -50,7 +50,7 @@ run/api:
 .PHONY: docker/up
 docker/up:
 	@echo 'Starting Application...'
-	@docker compose up --build -d
+	@docker compose up --build 
 
 
 ## docker/down: docker compose down
@@ -89,7 +89,7 @@ db/migrations/down: confirm
 
 # ============================================================================== #
 
-# QUALITY CONTROL
+# QUALITY 
 
 # ============================================================================== #
 
@@ -107,7 +107,7 @@ audit: vendor
 ## vendor: tidy and vendor dependencies
 .PHONY: vendor
 vendor:
-	@echo 'Tidying and verifying module dependecies...'
+	@echo 'Tidying and verifying module dependencies...'
 	go mod tidy
 	go mod verify
 	@echo 'Vendoring dependencies'

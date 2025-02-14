@@ -16,6 +16,13 @@ type Config struct {
 		maxIdleConns int
 		maxIdleTime  string
 	}
+	Smtp struct {
+		Host     string
+		Port     int
+		Username string
+		Password string
+		Sender   string
+	}
 }
 
 func LoadConfig() *Config {
@@ -37,6 +44,14 @@ func LoadConfig() *Config {
 		dbUser, dbPassword, dbHost, dbName)
 
 	flag.StringVar(&cfg.DB.dsn, "db-dsn", defaultDSN, "PostgreSQL DSN")
+
+	// MAIL
+	flag.StringVar(&cfg.Smtp.Host, "smtp-host", "smtp.mailtrap.io", "SMTP Host")
+	flag.IntVar(&cfg.Smtp.Port, "smtp-port", 2525, "SMTP Port")
+	flag.StringVar(&cfg.Smtp.Username, "smtp-username", "44cb4e51308dbf", "SMTP Username")
+	flag.StringVar(&cfg.Smtp.Password, "smtp-password", "089d64e1c8616a", "SMTP Password")
+	flag.StringVar(&cfg.Smtp.Sender, "smtp-sender", "Portfolio-Tracker Team <no-reply@example.com>", "SMTP Sender")
+
 	flag.Parse()
 	//dbPort := os.Getenv("DB_PORT")
 	//cfg.DB.dsn = fmt.Sprintf("postgres://%s:%s@localhost/%s?sslmode=disable", dbUser, dbPassword, dbName)

@@ -17,8 +17,8 @@ type envelope map[string]any
 // / readID retrieve the "id" URL parameter from the current request context,
 // / then convert to a integer and return it. If the operation isn't successfull
 // / it returns 0 and and error
-// / # Parameters
-// / - r: The incoming HTTP request
+// # Parameters
+// @ r: The incoming HTTP request
 // / # Returns
 // / - error: Returns an error if retrieved id is invalid, otherwise returns nil
 
