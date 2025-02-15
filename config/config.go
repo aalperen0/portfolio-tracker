@@ -31,6 +31,7 @@ func LoadConfig() *Config {
 	flag.StringVar(&cfg.Env, "env", "development", "development|staging|production")
 	flag.StringVar(&cfg.Version, "version", "1.0.0", "versioning")
 
+	// DB
 	dbUser := os.Getenv("DB_USER")
 	dbPassword := os.Getenv("DB_PASSWORD")
 	dbName := os.Getenv("DB_NAME")

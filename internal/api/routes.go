@@ -11,7 +11,6 @@ import (
 // / # Return
 // / - Returns httprouter instance.
 func (h *Handler) Routes() http.Handler {
-
 	router := httprouter.New()
 
 	router.NotFound = http.HandlerFunc(h.notFoundResponse)
@@ -19,6 +18,7 @@ func (h *Handler) Routes() http.Handler {
 
 	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", h.HealthCheckHandler)
 	router.HandlerFunc(http.MethodPost, "/v1/users", h.registerUserHandler)
+	router.HandlerFunc(http.MethodPatch, "/v1/users/activate", h.activateUserHandler)
 
 	return h.recoverPanic(router)
 }

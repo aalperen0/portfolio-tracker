@@ -1,6 +1,5 @@
 include .env
 
-
 # =====================================================================================
 
 # HELPER
@@ -64,7 +63,6 @@ docker/down:
 docker/db:
 	@echo "Opening db from terminal..."
 	docker compose exec postgres psql -U ptracker -d ptracker
-
 
 ## db/migrations/new: create a new database migration
 .PHONY: db/migrations/new
