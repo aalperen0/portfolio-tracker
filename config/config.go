@@ -51,11 +51,16 @@ func LoadConfig() *Config {
 	flag.IntVar(&cfg.Smtp.Port, "smtp-port", 2525, "SMTP Port")
 	flag.StringVar(&cfg.Smtp.Username, "smtp-username", "44cb4e51308dbf", "SMTP Username")
 	flag.StringVar(&cfg.Smtp.Password, "smtp-password", "089d64e1c8616a", "SMTP Password")
-	flag.StringVar(&cfg.Smtp.Sender, "smtp-sender", "Portfolio-Tracker Team <no-reply@example.com>", "SMTP Sender")
+	flag.StringVar(
+		&cfg.Smtp.Sender,
+		"smtp-sender",
+		"Portfolio-Tracker Team <no-reply@example.com>",
+		"SMTP Sender",
+	)
 
 	flag.Parse()
-	//dbPort := os.Getenv("DB_PORT")
-	//cfg.DB.dsn = fmt.Sprintf("postgres://%s:%s@localhost/%s?sslmode=disable", dbUser, dbPassword, dbName)
+	// dbPort := os.Getenv("DB_PORT")
+	// cfg.DB.dsn = fmt.Sprintf("postgres://%s:%s@localhost/%s?sslmode=disable", dbUser, dbPassword, dbName)
 
 	return &cfg
 }

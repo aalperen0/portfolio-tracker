@@ -23,7 +23,6 @@ func (h *Handler) logError(r *http.Request, err error) {
 // / The response errors below depends on this function and each of them
 // / sending appropriate response to the client in specific circumstances
 func (h *Handler) errorResponse(w http.ResponseWriter, r *http.Request, status int, message any) {
-
 	env := envelope{"error": message}
 	err := h.writeJSON(w, status, env, nil)
 	if err != nil {
@@ -65,11 +64,26 @@ func (h *Handler) methodNotAllowedResponse(w http.ResponseWriter, r *http.Reques
 // / The failedValidationResponse() method will be used to send a 422
 // / status code and JSON response to the client due to
 // / validation process encountered with a problem.
-func (h *Handler) failedValidationResponse(w http.ResponseWriter, r *http.Request, errors map[string]string) {
+func (h *Handler) failedValidationResponse(
+	w http.ResponseWriter,
+	r *http.Request,
+	errors map[string]string,
+) {
 	h.errorResponse(w, r, http.StatusUnprocessableEntity, errors)
 }
 
 func (h *Handler) editConflictResponse(w http.ResponseWriter, r *http.Request) {
 	msg := "unable to update the record due to an edit conflict, please try again"
 	h.errorResponse(w, r, http.StatusConflict, msg)
+}
+
+func (h *Handler) invalidCredentialsResponse(w http.ResponseWriter, r *http.Request) {
+	msg := "invalid or wrong credentials"
+	h.errorResponse(w, r, http.StatusUnauthorized, msg)
+}
+
+func (h *Handler) invalidAuthTokenResponse(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("WWW-Authenticate", "Bearer")
+	msg := "invalid or missing authentication token"
+	h.errorResponse(w, r, http.StatusUnauthorized, msg)
 }

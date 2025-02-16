@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -15,6 +16,8 @@ import (
 type UserModel struct {
 	DB *sql.DB
 }
+
+var AnonymousUser = &User{}
 
 type User struct {
 	ID        int64     `json:"id"`
@@ -40,7 +43,7 @@ type password struct {
 func (p *password) Set(plaintextPassword string) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(plaintextPassword), 12)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to hash password %w", err)
 	}
 	p.plaintext = &plaintextPassword
 	p.hash = hash
@@ -55,6 +58,10 @@ func (p *password) Set(plaintextPassword string) error {
 // # Returns
 // @ returns error if hash doesn't match with password
 func (p *password) Matches(plaintextPassword string) (bool, error) {
+	if len(p.hash) == 0 {
+		return false, errors.New("no password hash set")
+	}
+
 	err := bcrypt.CompareHashAndPassword(p.hash, []byte(plaintextPassword))
 	if err != nil {
 		switch {
@@ -126,7 +133,7 @@ func (m UserModel) Insert(user *User) error {
 // # Return
 // - User
 func (m UserModel) GetByEmail(email string) (*User, error) {
-	query := `SELECT id, name, email, activated, version
+	query := `SELECT id, name, email, password_hash, activated, version
 			  FROM users
 			  WHERE email = $1`
 
@@ -139,6 +146,7 @@ func (m UserModel) GetByEmail(email string) (*User, error) {
 		&user.ID,
 		&user.Name,
 		&user.Email,
+		&user.Password.hash,
 		&user.Activated,
 		&user.Version,
 	)

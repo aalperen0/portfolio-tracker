@@ -20,5 +20,7 @@ func (h *Handler) Routes() http.Handler {
 	router.HandlerFunc(http.MethodPost, "/v1/users", h.registerUserHandler)
 	router.HandlerFunc(http.MethodPatch, "/v1/users/activate", h.activateUserHandler)
 
-	return h.recoverPanic(router)
+	router.HandlerFunc(http.MethodPost, "/v1/users/auth", h.authenticationHandler)
+
+	return h.recoverPanic(h.authenticate(router))
 }

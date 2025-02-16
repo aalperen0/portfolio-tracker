@@ -146,7 +146,12 @@ func (h *Handler) activateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.writeJSON(w, http.StatusOK, envelope{"user": user}, nil)
+	err = h.writeJSON(
+		w,
+		http.StatusOK,
+		envelope{"user": user.Name, "activated": user.Activated},
+		nil,
+	)
 	if err != nil {
 		h.serverErrorResponse(w, r, err)
 	}
