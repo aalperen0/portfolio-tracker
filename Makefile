@@ -75,15 +75,15 @@ db/migrations/new:
 .PHONY: db/migrations/up
 db/migrations/up:
 	@echo "Running up migrations..."
-	docker run -v /home/aalprn/dev/portfolio-tracker/migrations:/migrations --network host --env-file .env migrate/migrate -path=/migrations/ -database "${DB_DSN_ZD}" up
+	docker run -v "${MIGRATION_PATH}":/migrations --network host --env-file .env migrate/migrate -path=/migrations/ -database "${DB_DSN_ZD}" up
 
 
 ## db/migrations/down: apply down database migrations
 .PHONY: db/migrations/down
 db/migrations/down: confirm
 	@echo "Down version of migrations..."
-	docker run -v /home/aalprn/dev/portfolio-tracker/migrations:/migrations --network host --env-file .env migrate/migrate -path=/migrations/ -database "${DB_DSN_ZD}" down 1
-
+	docker run -v "${MIGRATION_PATH}":/migrations --network host --env-file .env migrate/migrate -path=/migrations/ -database "${DB_DSN_ZD}" down 1
+ 
 
 # ============================================================================== #
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/aalperen0/portfolio-tracker/config"
 	"github.com/aalperen0/portfolio-tracker/internal/api"
+	"github.com/aalperen0/portfolio-tracker/internal/data"
 	"github.com/aalperen0/portfolio-tracker/internal/mail"
 	"github.com/aalperen0/portfolio-tracker/internal/model"
 )
@@ -15,6 +16,8 @@ import (
 func main() {
 	cfg := config.LoadConfig()
 	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+
+	marketData := data.NewCoinClient(cfg.Coins.ApiKey)
 
 	db, err := config.InitDB(cfg)
 	if err != nil {
@@ -37,6 +40,13 @@ func main() {
 	)
 
 	handler := api.NewHandler(*cfg, logger, models, mailer)
+
+	coins, err := marketData.GetCoinMarkets("usd")
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to fetch marketData")
+	} else {
+		logger.Info().Msgf("fetched coins %d", len(coins))
+	}
 
 	err = handler.Serve()
 	if err != nil {

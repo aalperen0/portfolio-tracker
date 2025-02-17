@@ -23,6 +23,9 @@ type Config struct {
 		Password string
 		Sender   string
 	}
+	Coins struct {
+		ApiKey string
+	}
 }
 
 func LoadConfig() *Config {
@@ -58,9 +61,11 @@ func LoadConfig() *Config {
 		"SMTP Sender",
 	)
 
+	// COIN API apiKey
+	coinApiKey := os.Getenv("COINS_API_KEY")
+	flag.StringVar(&cfg.Coins.ApiKey, "coin-key", coinApiKey, "Market data")
+
 	flag.Parse()
-	// dbPort := os.Getenv("DB_PORT")
-	// cfg.DB.dsn = fmt.Sprintf("postgres://%s:%s@localhost/%s?sslmode=disable", dbUser, dbPassword, dbName)
 
 	return &cfg
 }
