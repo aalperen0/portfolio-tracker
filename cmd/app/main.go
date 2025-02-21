@@ -28,6 +28,7 @@ func main() {
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initalize models")
 	}
+
 	defer db.Close()
 	logger.Info().Msg("database connection pool established")
 
@@ -39,14 +40,7 @@ func main() {
 		cfg.Smtp.Sender,
 	)
 
-	handler := api.NewHandler(*cfg, logger, models, mailer)
-
-	coins, err := marketData.GetCoinMarkets("usd")
-	if err != nil {
-		logger.Error().Err(err).Msg("failed to fetch marketData")
-	} else {
-		logger.Info().Msgf("fetched coins %d", len(coins))
-	}
+	handler := api.NewHandler(*cfg, logger, models, mailer, marketData)
 
 	err = handler.Serve()
 	if err != nil {

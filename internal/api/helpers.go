@@ -6,33 +6,37 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
+
+	"github.com/aalperen0/portfolio-tracker/internal/validator"
 )
 
 type envelope map[string]any
 
-// / readID retrieve the "id" URL parameter from the current request context,
+// /readID retrieve the "id" URL parameter from the current request context,
 // / then convert to a integer and return it. If the operation isn't successfull
 // / it returns 0 and and error
 // # Parameters
-// @ r: The incoming HTTP request
+// @r: The incoming HTTP request
 // / # Returns
 // / - error: Returns an error if retrieved id is invalid, otherwise returns nil
 
-func (h *Handler) readIDParam(r *http.Request) (int64, error) {
+func (h *Handler) readIDParam(r *http.Request) (string, error) {
 	params := httprouter.ParamsFromContext(r.Context())
-	id, err := strconv.ParseInt(params.ByName("id"), 10, 64)
-	if err != nil {
-		return 0, errors.New("invalid id parameter")
-
-	}
+	id := params.ByName("id")
 	return id, nil
 }
 
-func (h *Handler) writeJSON(w http.ResponseWriter, status int, data any, headers http.Header) error {
+func (h *Handler) writeJSON(
+	w http.ResponseWriter,
+	status int,
+	data any,
+	headers http.Header,
+) error {
 	js, err := json.Marshal(data)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to encode JSON response")
@@ -87,14 +91,23 @@ func (h *Handler) readJSON(w http.ResponseWriter, r *http.Request, dest any) err
 
 		switch {
 		case errors.As(err, &syntaxError):
-			return fmt.Errorf("body contains badly-formed JSON (at character %d)", syntaxError.Offset)
+			return fmt.Errorf(
+				"body contains badly-formed JSON (at character %d)",
+				syntaxError.Offset,
+			)
 		case errors.Is(err, io.ErrUnexpectedEOF):
 			return errors.New("body contains badly formed JSON")
 		case errors.As(err, &unmarshalTypeError):
 			if unmarshalTypeError.Field != "" {
-				return fmt.Errorf("body contains incorrect JSON type for field %q", unmarshalTypeError.Field)
+				return fmt.Errorf(
+					"body contains incorrect JSON type for field %q",
+					unmarshalTypeError.Field,
+				)
 			}
-			return fmt.Errorf("body contains incorrect JSON type at (character %d)", unmarshalTypeError.Offset)
+			return fmt.Errorf(
+				"body contains incorrect JSON type at (character %d)",
+				unmarshalTypeError.Offset,
+			)
 		case strings.HasPrefix(err.Error(), "json: unknown field "):
 			fieldName := strings.TrimPrefix(err.Error(), "json: unknown field: ")
 			return fmt.Errorf("body  contains unknown key %s", fieldName)
@@ -113,4 +126,30 @@ func (h *Handler) readJSON(w http.ResponseWriter, r *http.Request, dest any) err
 		return errors.New("body must only contain a single JSON value")
 	}
 	return nil
+}
+
+func (h *Handler) readURLstring(qs url.Values, key, defaultValue string) string {
+	str := qs.Get(key)
+	if str == "" {
+		return defaultValue
+	}
+	return str
+}
+
+func (h *Handler) readURLint(
+	qs url.Values,
+	key string,
+	defaultValue int,
+	v *validator.Validator,
+) int {
+	str := qs.Get(key)
+	if str == "" {
+		return defaultValue
+	}
+	i, err := strconv.Atoi(str)
+	if err != nil {
+		v.AddError(key, "must be an integer value")
+		return defaultValue
+	}
+	return i
 }

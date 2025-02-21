@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 )
 
 type Client struct {
@@ -34,13 +36,39 @@ func NewCoinClient(apiKey string) *Client {
 	}
 }
 
-func (c *Client) GetCoinMarkets(currency string) ([]CoinMarketData, error) {
-	url := fmt.Sprintf("%s/coins/markets?vs_currency=%s", c.baseURL, currency)
+func (c *Client) GetCoinMarkets(
+	currency string,
+	filters Filters,
+) ([]CoinMarketData, error) {
+	query := url.Values{}
 
-	req, err := http.NewRequest("GET", url, nil)
+	query.Add("vs_currency", currency)
+
+	if filters.Ids != "" {
+		query.Add("ids", filters.Ids)
+	}
+
+	if filters.Page > 0 {
+		query.Add("page", strconv.Itoa(filters.Page))
+	}
+	if filters.PerPage > 0 {
+		query.Add("per_page", strconv.Itoa(filters.PerPage))
+	}
+	if filters.Order != "" {
+		query.Add("order", filters.Order)
+	}
+
+	searchUrl := fmt.Sprintf("%s/coins/markets?%s", c.baseURL, query.Encode())
+
+	if len(query) > 0 {
+		searchUrl = fmt.Sprintf("%s&%s", searchUrl, query.Encode())
+	}
+
+	req, err := http.NewRequest("GET", searchUrl, nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
+
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("x-cg-demo-api-key", c.apiKey)
 
@@ -61,4 +89,43 @@ func (c *Client) GetCoinMarkets(currency string) ([]CoinMarketData, error) {
 		return nil, fmt.Errorf("decoding response %w", err)
 	}
 	return coins, nil
+}
+
+// ////////////////////////////////////////////
+
+func (c *Client) GetCoinCurrentPriceAndSymbol(coinID string) (float64, string, error) {
+	url := fmt.Sprintf("%s/coins/%s", c.baseURL, coinID)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return 0, "", err
+	}
+
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("x-cg-demo-api-key", c.apiKey)
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, "", err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return 0, "", fmt.Errorf("failed to get coin data: status %d", res.StatusCode)
+	}
+
+	var response struct {
+		Symbol     string `json:"symbol"`
+		MarketData struct {
+			CurrentPrice struct {
+				USD float64 `json:"usd"`
+			} `json:"current_price"`
+		} `json:"market_data"`
+	}
+
+	err = json.NewDecoder(res.Body).Decode(&response)
+	if err != nil {
+		return 0, "", err
+	}
+	return response.MarketData.CurrentPrice.USD, response.Symbol, nil
 }

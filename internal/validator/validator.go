@@ -10,9 +10,12 @@ var EmailRx = regexp.MustCompile(
 )
 
 var (
-	ErrRecordNotFound = errors.New("record not found")
-	ErrDuplicateEmail = errors.New("duplicate email")
-	ErrEditConflict   = errors.New("edit conflict")
+	ErrRecordNotFound  = errors.New("record not found")
+	ErrDuplicateEmail  = errors.New("duplicate email")
+	ErrEditConflict    = errors.New("edit conflict")
+	ErrInvalidCurrency = errors.New(
+		"invalid currency, please use valid currencies like 'usd', 'gbp', 'try'",
+	)
 )
 
 // / It contains map of validation errors
@@ -59,4 +62,13 @@ func (v *Validator) Check(ok bool, key, message string) {
 // - bool: returns true if it matches
 func Matches(value string, rx *regexp.Regexp) bool {
 	return rx.MatchString(value)
+}
+
+func PermittedValues[T comparable](value T, permittedValues ...T) bool {
+	for v := range permittedValues {
+		if value == permittedValues[v] {
+			return true
+		}
+	}
+	return false
 }

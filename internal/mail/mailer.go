@@ -28,8 +28,6 @@ func New(host string, port int, username, password, sender string) Mailer {
 	}
 }
 
-// Use the ParseFS() method to parse the required template file from the embedded
-// file system.
 func (m Mailer) Send(recipient string, templateFile string, data any) error {
 	tmpl, err := template.New("email").ParseFS(templateFS, "templates/"+templateFile)
 	if err != nil {
