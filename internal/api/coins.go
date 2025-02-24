@@ -200,3 +200,45 @@ func (h *Handler) DeleteCoinFromPortfolioHandler(w http.ResponseWriter, r *http.
 		h.serverErrorResponse(w, r, err)
 	}
 }
+
+func (h *Handler) GetAllCoinsFromPortfolioHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		CoinID string
+		data.Filters
+	}
+
+	user := data.ContextGetUser(r)
+
+	v := validator.New()
+
+	qs := r.URL.Query()
+	input.CoinID = h.readURLstring(qs, "coin", "")
+	input.Page = h.readURLint(qs, "page", 1, v)
+	input.PerPage = h.readURLint(qs, "per_page", 20, v)
+	input.Sort = h.readURLstring(qs, "sort", "amount_asc")
+	input.SortList = []string{
+		"amount_asc",
+		"amount_desc",
+		"pnl_asc",
+		"pnl_desc",
+		"coin_id_asc",
+		"coin_id_desc",
+	}
+
+	if data.ValidateOtherFilters(v, input.Filters); !v.Valid() {
+		h.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	coins, err := h.models.Coin.GetAllCoinsForUser(input.CoinID, user.ID, input.Filters)
+	if err != nil {
+		h.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = h.writeJSON(w, http.StatusOK, envelope{"coins": coins}, nil)
+	if err != nil {
+		h.serverErrorResponse(w, r, err)
+		return
+	}
+}

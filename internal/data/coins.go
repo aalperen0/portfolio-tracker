@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/aalperen0/portfolio-tracker/internal/validator"
@@ -121,4 +122,49 @@ func (m CoinModel) DeleteCoin(coinID string, userID int64) error {
 	}
 
 	return nil
+}
+
+func (m CoinModel) GetAllCoinsForUser(
+	coinID string,
+	userID int64,
+	filters Filters,
+) ([]*Coin, error) {
+	query := fmt.Sprintf(`SELECT coin_id, symbol, amount, purchase_price_average, total_cost, pnl
+              FROM coins
+              WHERE (coin_id ILIKE $1 OR symbol ILIKE $1 or $1 = '') AND user_id = $2
+              ORDER BY %s %s 
+              LIMIT $3 OFFSET $4`, filters.SortColumn(), filters.SortDirection())
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	args := []any{coinID, userID, filters.Limit(), filters.Offset()}
+
+	rows, err := m.DB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	coins := []*Coin{}
+
+	for rows.Next() {
+		var coin Coin
+		err := rows.Scan(
+			&coin.CoinID,
+			&coin.Symbol,
+			&coin.Amount,
+			&coin.PurchasePriceAverage,
+			&coin.TotalCost,
+			&coin.PNL,
+		)
+		if err != nil {
+			return nil, err
+		}
+		coins = append(coins, &coin)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return coins, nil
 }
