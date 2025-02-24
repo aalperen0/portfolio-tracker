@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+
+	"github.com/aalperen0/portfolio-tracker/internal/validator"
 )
 
 type Client struct {
@@ -111,7 +113,8 @@ func (c *Client) GetCoinCurrentPriceAndSymbol(coinID string) (float64, string, e
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return 0, "", fmt.Errorf("failed to get coin data: status %d", res.StatusCode)
+		// return 0, "", fmt.Errorf("failed to get coin data: status %d", res.StatusCode)
+		return 0, "", validator.ErrRecordNotFound
 	}
 
 	var response struct {

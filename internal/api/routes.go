@@ -18,9 +18,27 @@ func (h *Handler) Routes() http.Handler {
 
 	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", h.HealthCheckHandler)
 	router.HandlerFunc(http.MethodPost, "/v1/users", h.registerUserHandler)
-	router.HandlerFunc(http.MethodPatch, "/v1/users/activate", h.activateUserHandler)
-
 	router.HandlerFunc(http.MethodPost, "/v1/users/auth", h.authenticationHandler)
+	router.HandlerFunc(http.MethodPatch, "/v1/users/activate", h.activateUserHandler)
 	router.HandlerFunc(http.MethodGet, "/v1/coins", h.GetCoinsFromMarketHandler)
+
+	protectedRoutes := []struct {
+		method  string
+		path    string
+		handler http.HandlerFunc
+	}{
+		{http.MethodPost, "/v1/users/coins", h.AddCoinsHandler},
+		{http.MethodGet, "/v1/users/coins/:id", h.GetCoinFromPortfolioHandler},
+		{http.MethodDelete, "/v1/users/coins/:id", h.DeleteCoinFromPortfolioHandler},
+	}
+
+	for _, route := range protectedRoutes {
+		router.HandlerFunc(
+			route.method,
+			route.path,
+			h.requiredAuthenticatedUser(http.HandlerFunc(route.handler)),
+		)
+	}
+
 	return h.recoverPanic(h.authenticate(router))
 }

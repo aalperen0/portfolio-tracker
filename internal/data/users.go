@@ -29,6 +29,10 @@ type User struct {
 	Version   int       `json:"-"`
 }
 
+func (u *User) IsAnonymous() bool {
+	return u == AnonymousUser
+}
+
 type password struct {
 	plaintext *string
 	hash      []byte

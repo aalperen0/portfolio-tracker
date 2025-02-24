@@ -28,7 +28,7 @@ func (h *Handler) authenticate(next http.Handler) http.Handler {
 		authorizationHeader := r.Header.Get("Authorization")
 
 		if authorizationHeader == "" {
-			data.ContextSetUser(r, data.AnonymousUser)
+			r = data.ContextSetUser(r, data.AnonymousUser)
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -58,10 +58,23 @@ func (h *Handler) authenticate(next http.Handler) http.Handler {
 				h.serverErrorResponse(w, r, err)
 
 			}
+			return
 		}
 
 		r = data.ContextSetUser(r, user)
 
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (h *Handler) requiredAuthenticatedUser(next http.Handler) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := data.ContextGetUser(r)
+
+		if user.IsAnonymous() {
+			h.authenticationRequiredResponse(w, r)
+			return
+		}
 		next.ServeHTTP(w, r)
 	})
 }

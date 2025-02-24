@@ -51,7 +51,7 @@ func (h *Handler) badRequestResponse(w http.ResponseWriter, r *http.Request, err
 // / status code and  JSON response to the client.
 func (h *Handler) notFoundResponse(w http.ResponseWriter, r *http.Request) {
 	msg := "the requested resource could not be found"
-	h.errorResponse(w, r, http.StatusInternalServerError, msg)
+	h.errorResponse(w, r, http.StatusNotFound, msg)
 }
 
 // / The methodNotAllowedResponse() method will be used to send a 405 Method Not Allowed
@@ -85,5 +85,10 @@ func (h *Handler) invalidCredentialsResponse(w http.ResponseWriter, r *http.Requ
 func (h *Handler) invalidAuthTokenResponse(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("WWW-Authenticate", "Bearer")
 	msg := "invalid or missing authentication token"
+	h.errorResponse(w, r, http.StatusUnauthorized, msg)
+}
+
+func (h *Handler) authenticationRequiredResponse(w http.ResponseWriter, r *http.Request) {
+	msg := "you must be authenticated to access this resource"
 	h.errorResponse(w, r, http.StatusUnauthorized, msg)
 }

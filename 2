@@ -24,6 +24,7 @@ func (h *Handler) GetCoinsFromMarketHandler(w http.ResponseWriter, r *http.Reque
 
 	v := validator.New()
 	qs := r.URL.Query()
+
 	input.Page = h.readURLint(qs, "page", 1, v)
 	input.PerPage = h.readURLint(qs, "per_page", 20, v)
 	input.Ids = h.readURLstring(qs, "ids", "")
@@ -142,14 +143,16 @@ func (h *Handler) AddCoinsHandler(w http.ResponseWriter, r *http.Request) {
 
 // GET /v1/users/coins/:id
 
-func (h *Handler) GetCoinFromPortfolioHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetCoinsFromPortfolioHandler(w http.ResponseWriter, r *http.Request) {
 	coinID, err := h.readIDParam(r)
-	if err != nil {
+    if err !=nil{
+
 		h.notFoundResponse(w, r)
 		return
+    }
 	}
 
-	user := data.ContextGetUser(r)
+	
 
 	coin, err := h.models.Coin.GetCoinForUser(coinID, user.ID)
 	if err != nil {
@@ -160,43 +163,5 @@ func (h *Handler) GetCoinFromPortfolioHandler(w http.ResponseWriter, r *http.Req
 			h.serverErrorResponse(w, r, err)
 		}
 		return
-
-	}
-
-	err = h.writeJSON(w, http.StatusOK, envelope{"coin": coin}, nil)
-	if err != nil {
-		h.serverErrorResponse(w, r, err)
-	}
-}
-
-func (h *Handler) DeleteCoinFromPortfolioHandler(w http.ResponseWriter, r *http.Request) {
-	coinID, err := h.readIDParam(r)
-	if err != nil {
-		h.notFoundResponse(w, r)
-		return
-	}
-
-	user := data.ContextGetUser(r)
-
-	err = h.models.Coin.DeleteCoin(coinID, user.ID)
-	if err != nil {
-		switch {
-		case errors.Is(err, validator.ErrRecordNotFound):
-			h.notFoundResponse(w, r)
-		default:
-			h.serverErrorResponse(w, r, err)
-		}
-		return
-
-	}
-
-	err = h.writeJSON(
-		w,
-		http.StatusOK,
-		envelope{"coin": fmt.Sprintf("%s deleted from portoflio", coinID)},
-		nil,
-	)
-	if err != nil {
-		h.serverErrorResponse(w, r, err)
 	}
 }

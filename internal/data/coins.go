@@ -15,8 +15,8 @@ type CoinModel struct {
 
 type Coin struct {
 	CoinID               string    `json:"coin_id"`
-	UserID               int64     `json:"user_id"`
-	CreatedAt            time.Time `json:"created_at"`
+	UserID               int64     `json:"-"`
+	CreatedAt            time.Time `json:"-"`
 	Symbol               string    `json:"symbol"`
 	Amount               float64   `json:"amount"`
 	PurchasePriceAverage float64   `json:"purchase_price_average"`
@@ -33,13 +33,14 @@ func ValidateCoin(v *validator.Validator, coin *Coin) {
 	v.Check(len(coin.CoinID) <= 100, "", "must be not longer than 100 bytes")
 }
 
-func (m CoinModel) Insert(coin *Coin) error {
-	query := `INSERT INTO coins(coin_id, symbol, amount, purchase_price_average, total_cost, pnl)
-              VALUES($1, $2, $3, $4, $5 ,$6)
+func (m CoinModel) InsertCoin(coin *Coin) error {
+	query := `INSERT INTO coins(coin_id, user_id, symbol, amount, purchase_price_average, total_cost, pnl)
+              VALUES($1, $2, $3, $4, $5 ,$6, $7)
               RETURNING created_at, version`
 
 	args := []any{
 		coin.CoinID,
+		coin.UserID,
 		coin.Symbol,
 		coin.Amount,
 		coin.PurchasePriceAverage,
@@ -54,22 +55,30 @@ func (m CoinModel) Insert(coin *Coin) error {
 }
 
 // / Get coin from the porfolio according to id of coin
-// / Coin id msut be string
-func (m CoinModel) Get(id string) (*Coin, error) {
-	if id == "" {
+// / Coin id must be string
+func (m CoinModel) GetCoinForUser(coinId string, userID int64) (*Coin, error) {
+	if coinId == "" {
 		return nil, validator.ErrRecordNotFound
 	}
 
-	query := `SELECT coin_id, symbol, amount, purchase_price_average, total_cost, PNL
+	query := `SELECT coin_id, user_id, symbol, amount, purchase_price_average, total_cost, pnl
               FROM coins
-              WHERE coin_id = $1`
+              WHERE coin_id = $1 AND user_id = $2`
 
 	var coin Coin
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := m.DB.QueryRowContext(ctx, query, id).Scan(&coin)
+	err := m.DB.QueryRowContext(ctx, query, coinId, userID).Scan(
+		&coin.CoinID,
+		&coin.UserID,
+		&coin.Symbol,
+		&coin.Amount,
+		&coin.PurchasePriceAverage,
+		&coin.TotalCost,
+		&coin.PNL,
+	)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -82,22 +91,22 @@ func (m CoinModel) Get(id string) (*Coin, error) {
 }
 
 // Update  coin in the porfolio
-func (m CoinModel) Update(coin *Coin) error {
+func (m CoinModel) UpdateCoin(coin *Coin) error {
 	return nil
 }
 
 // Delete  coin in the porfolio
-func (m CoinModel) Delete(id string) error {
-	if id == "" {
+func (m CoinModel) DeleteCoin(coinID string, userID int64) error {
+	if coinID == "" {
 		return validator.ErrRecordNotFound
 	}
 
-	query := `DELETE FROM coins WHERE coin_id = $1`
+	query := `DELETE FROM coins WHERE coin_id = $1 AND user_id = $2`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	result, err := m.DB.ExecContext(ctx, query, id)
+	result, err := m.DB.ExecContext(ctx, query, coinID, userID)
 	if err != nil {
 		return err
 	}

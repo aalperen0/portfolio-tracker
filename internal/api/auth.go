@@ -36,6 +36,7 @@ func (h *Handler) authenticationHandler(w http.ResponseWriter, r *http.Request) 
 		switch {
 		case errors.Is(err, validator.ErrRecordNotFound):
 			h.invalidCredentialsResponse(w, r)
+			return
 		default:
 			h.serverErrorResponse(w, r, err)
 		}

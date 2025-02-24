@@ -1,6 +1,8 @@
 package data
 
-import "github.com/aalperen0/portfolio-tracker/internal/validator"
+import (
+	"github.com/aalperen0/portfolio-tracker/internal/validator"
+)
 
 type Filters struct {
 	Ids     string
@@ -22,4 +24,12 @@ func ValidateFilters(v *validator.Validator, f Filters) {
 		"order",
 		"must be a valid order type",
 	)
+}
+
+func (f Filters) Limit() int {
+	return f.PerPage
+}
+
+func (f Filters) Offset() int {
+	return (f.Page - 1) * f.PerPage
 }

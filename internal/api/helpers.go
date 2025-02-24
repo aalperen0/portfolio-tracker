@@ -28,6 +28,9 @@ type envelope map[string]any
 func (h *Handler) readIDParam(r *http.Request) (string, error) {
 	params := httprouter.ParamsFromContext(r.Context())
 	id := params.ByName("id")
+	if id == "" {
+		return "", errors.New("invalid parameter")
+	}
 	return id, nil
 }
 
