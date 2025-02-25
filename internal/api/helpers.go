@@ -12,6 +12,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
+	"github.com/aalperen0/portfolio-tracker/internal/data"
 	"github.com/aalperen0/portfolio-tracker/internal/validator"
 )
 
@@ -155,4 +156,17 @@ func (h *Handler) readURLint(
 		return defaultValue
 	}
 	return i
+}
+
+func calculateFields(c *data.Coin, amount float64, price float64) {
+	totalNewCost := amount * price
+	c.TotalCost += totalNewCost
+
+	c.Amount += amount
+	c.PurchasePriceAverage = c.TotalCost / c.Amount
+}
+
+func calculatePNL(c *data.Coin, currentPrice float64) {
+	newPNL := (c.Amount * currentPrice) - c.TotalCost
+	c.PNL = newPNL
 }

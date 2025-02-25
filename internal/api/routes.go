@@ -30,6 +30,7 @@ func (h *Handler) Routes() http.Handler {
 		{http.MethodPost, "/v1/users/coins", h.AddCoinsHandler},
 		{http.MethodGet, "/v1/users/coins/:id", h.GetCoinFromPortfolioHandler},
 		{http.MethodDelete, "/v1/users/coins/:id", h.DeleteCoinFromPortfolioHandler},
+		{http.MethodPut, "/v1/users/coins/:id", h.UpdateCoinsHandler},
 		{http.MethodGet, "/v1/users/coins", h.GetAllCoinsFromPortfolioHandler},
 	}
 

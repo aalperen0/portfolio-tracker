@@ -140,7 +140,7 @@ func (h *Handler) AddCoinsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GET /v1/users/coins/:id
+// / GET /v1/users/coins/:id
 
 func (h *Handler) GetCoinFromPortfolioHandler(w http.ResponseWriter, r *http.Request) {
 	coinID, err := h.readIDParam(r)
@@ -201,6 +201,7 @@ func (h *Handler) DeleteCoinFromPortfolioHandler(w http.ResponseWriter, r *http.
 	}
 }
 
+// / GET /v1/users/coins
 func (h *Handler) GetAllCoinsFromPortfolioHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		CoinID string
@@ -240,5 +241,69 @@ func (h *Handler) GetAllCoinsFromPortfolioHandler(w http.ResponseWriter, r *http
 	if err != nil {
 		h.serverErrorResponse(w, r, err)
 		return
+	}
+}
+
+// / UPDATE /v1/users/coins/:id
+
+func (h *Handler) UpdateCoinsHandler(w http.ResponseWriter, r *http.Request) {
+	coinID, err := h.readIDParam(r)
+	if err != nil {
+		h.notFoundResponse(w, r)
+		return
+	}
+
+	user := data.ContextGetUser(r)
+
+	coin, err := h.models.Coin.GetCoinForUser(coinID, user.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, validator.ErrRecordNotFound):
+			h.notFoundResponse(w, r)
+		default:
+			h.serverErrorResponse(w, r, err)
+		}
+	}
+
+	var input struct {
+		Amount        float64 `json:"amount"`
+		PurchasePrice float64 `json:"purchase_price"`
+	}
+
+	err = h.readJSON(w, r, &input)
+	if err != nil {
+		h.badRequestResponse(w, r, err)
+		return
+	}
+
+	v := validator.New()
+	if data.ValidateCoinUpdate(v, input.Amount, input.PurchasePrice); !v.Valid() {
+		h.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	currentPrice, _, err := h.marketData.GetCoinCurrentPriceAndSymbol(coinID)
+	if err != nil {
+		h.serverErrorResponse(w, r, err)
+		return
+	}
+
+	calculateFields(coin, input.Amount, input.PurchasePrice)
+	calculatePNL(coin, currentPrice)
+
+	err = h.models.Coin.UpdateCoinsForUser(coin)
+	if err != nil {
+		switch {
+		case errors.Is(err, validator.ErrEditConflict):
+			h.editConflictResponse(w, r)
+		default:
+			h.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	err = h.writeJSON(w, http.StatusOK, envelope{"coin": coin}, nil)
+	if err != nil {
+		h.serverErrorResponse(w, r, err)
 	}
 }

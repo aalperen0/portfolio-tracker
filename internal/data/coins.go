@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/aalperen0/portfolio-tracker/internal/validator"
@@ -32,6 +33,11 @@ func ValidateCoin(v *validator.Validator, coin *Coin) {
 	v.Check(coin.TotalCost > 0, "total_cost", "must be greater than zero")
 	v.Check(coin.CoinID != "", "coin_id", "must be provided")
 	v.Check(len(coin.CoinID) <= 100, "", "must be not longer than 100 bytes")
+}
+
+func ValidateCoinUpdate(v *validator.Validator, amount, purchasePrice float64) {
+	v.Check(amount > 0, "amount", "must be greater than zero")
+	v.Check(purchasePrice > 0, "purchase_price", "must be greater than zero")
 }
 
 func (m CoinModel) InsertCoin(coin *Coin) error {
@@ -89,11 +95,6 @@ func (m CoinModel) GetCoinForUser(coinId string, userID int64) (*Coin, error) {
 		}
 	}
 	return &coin, nil
-}
-
-// Update  coin in the porfolio
-func (m CoinModel) UpdateCoin(coin *Coin) error {
-	return nil
 }
 
 // Delete  coin in the porfolio
@@ -167,4 +168,52 @@ func (m CoinModel) GetAllCoinsForUser(
 		return nil, err
 	}
 	return coins, nil
+}
+
+func (m CoinModel) UpdateCoinsForUser(coin *Coin) error {
+	query := `UPDATE coins 
+              SET amount = $1, purchase_price_average = $2, total_cost = $3, pnl = $4, version = version + 1 
+              WHERE coin_id = $5 AND user_id = $6 
+              RETURNING version`
+
+	args := []any{
+		coin.Amount,
+		coin.PurchasePriceAverage,
+		coin.TotalCost,
+		coin.PNL,
+		coin.CoinID,
+		coin.UserID,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	tx, err := m.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
+			log.Printf("rollback error: %v", err)
+		}
+	}()
+
+	err = tx.QueryRowContext(ctx, query, args...).Scan(&coin.Version)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return validator.ErrEditConflict
+		default:
+			return err
+		}
+	}
+
+	// COMMIT ensures that all changes in a transaction are permanently saved,
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
