@@ -31,6 +31,20 @@ services:
       interval: 2s
       retries: 5
       timeout: 1s
+
+  redis:
+    image: redis:latest
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+        - app-network
+    healthcheck:
+         test: ["CMD", "redis-cli", "ping"]
+         interval: 2s
+         retries: 5
+         timeout: 1s
+    
   migrate:
     image: migrate/migrate
     depends_on:

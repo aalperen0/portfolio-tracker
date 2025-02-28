@@ -6,6 +6,8 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog"
 )
 
 // / Initalize database connection, pinging db to check connection
@@ -23,6 +25,13 @@ func InitDB(cfg *Config) (*sql.DB, error) {
 
 	db.SetMaxIdleConns(cfg.DB.maxIdleConns)
 	db.SetMaxOpenConns(cfg.DB.maxOpenConns)
+
+	maxLifeTime, err := time.ParseDuration(cfg.DB.maxLifeTime)
+	if err != nil {
+		return nil, err
+	}
+	db.SetConnMaxLifetime(maxLifeTime)
+
 	duration, err := time.ParseDuration(cfg.DB.maxIdleTime)
 	if err != nil {
 		return nil, err
@@ -38,4 +47,24 @@ func InitDB(cfg *Config) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+func InitRedis(cfg *Config, logger zerolog.Logger) (*redis.Client, error) {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     cfg.Redis.Host,
+		Password: "",
+		DB:       0,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err := rdb.Ping(ctx).Result()
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to connect to redis")
+		return nil, err
+	}
+	logger.Info().Msg("Connected to redis")
+
+	return rdb, nil
 }

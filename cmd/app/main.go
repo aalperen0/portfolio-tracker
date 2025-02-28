@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"time"
 
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
@@ -11,6 +12,7 @@ import (
 	"github.com/aalperen0/portfolio-tracker/internal/data"
 	"github.com/aalperen0/portfolio-tracker/internal/mail"
 	"github.com/aalperen0/portfolio-tracker/internal/model"
+	"github.com/aalperen0/portfolio-tracker/internal/worker"
 )
 
 func main() {
@@ -23,14 +25,26 @@ func main() {
 	if err != nil {
 		logger.Fatal().Err(err)
 	}
+	defer db.Close()
+	logger.Info().Msg("database connection pool established")
 
-	models, err := model.NewModels(db)
+	rdb, err := config.InitRedis(cfg, logger)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to initalize redis")
+	}
+
+	models, err := model.NewModels(db, rdb)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initalize models")
 	}
 
-	defer db.Close()
-	logger.Info().Msg("database connection pool established")
+	cm := &data.CoinModel{
+		DB:  db,
+		RDB: rdb,
+	}
+
+	pnlUpdater := worker.NewPNLUpdater(cm, marketData, 3*time.Minute, logger)
+	pnlUpdater.Start()
 
 	mailer := mail.New(
 		cfg.Smtp.Host,

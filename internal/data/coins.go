@@ -8,11 +8,14 @@ import (
 	"log"
 	"time"
 
+	"github.com/redis/go-redis/v9"
+
 	"github.com/aalperen0/portfolio-tracker/internal/validator"
 )
 
 type CoinModel struct {
-	DB *sql.DB
+	DB  *sql.DB
+	RDB *redis.Client
 }
 
 type Coin struct {
@@ -216,4 +219,74 @@ func (m CoinModel) UpdateCoinsForUser(coin *Coin) error {
 	}
 
 	return nil
+}
+
+// / Fetching all distinct coins from database
+// / Push to the queue
+
+func (m CoinModel) EnqueuePNLUpdates() error {
+	ctx := context.Background()
+
+	coinQuery := `SELECT DISTINCT coin_id FROM coins`
+	rows, err := m.DB.QueryContext(ctx, coinQuery)
+	if err != nil {
+		return err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var coinID string
+		if err := rows.Scan(&coinID); err != nil {
+			return err
+		}
+
+		err = m.RDB.RPush(ctx, "pnl_queue", coinID).Err()
+		if err != nil {
+			log.Printf("error pushing %s to redis %v", coinID, err)
+		}
+
+	}
+	return rows.Err()
+}
+
+func (m CoinModel) UpdatePNLForCoin(coinID string, currentPrice float64) error {
+	ctx := context.Background()
+
+	// Check database connection
+	if err := m.DB.PingContext(ctx); err != nil {
+		log.Printf("database connection check failed: %v", err)
+		return err
+	}
+
+	// Fetch all holdings for the given coin
+	query := `SELECT user_id, amount, purchase_price_average FROM coins WHERE coin_id = $1`
+	rows, err := m.DB.QueryContext(ctx, query, coinID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	// Process each holding and update PNL
+	for rows.Next() {
+		var userID int64
+		var amount, purchasePriceAvg float64
+
+		if err := rows.Scan(&userID, &amount, &purchasePriceAvg); err != nil {
+			return err
+		}
+
+		// Calculate PNL
+		pnl := amount * (currentPrice - purchasePriceAvg)
+
+		// Update PNL directly in the database
+		updateQuery := `UPDATE coins SET pnl = $1 WHERE coin_id = $2 AND user_id = $3`
+		_, err = m.DB.ExecContext(ctx, updateQuery, pnl, coinID, userID)
+		if err != nil {
+			log.Printf("failed to update PNL for user %d, coin %s: %v", userID, coinID, err)
+			continue
+		}
+	}
+
+	return rows.Err()
 }
