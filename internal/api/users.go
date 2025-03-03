@@ -101,6 +101,15 @@ func (h *Handler) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// / Route: POST /v1/users/activate
+// / This handler processes incoming HTTP requests for activating existing user.
+// / Receive an activation token from user.
+// / It validates the user's token, checks for errors, and retrieve the user from database.
+// / Request Body: The handler expects a JSON object in the request body with the following fields:
+// # Parameters
+// @ token (string, required): The name of the user.
+// # Response: Success (HTTP Status 200):
+
 func (h *Handler) activateUserHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		TokenPlainText string `json:"token"`

@@ -9,6 +9,10 @@ import (
 	"github.com/aalperen0/portfolio-tracker/internal/validator"
 )
 
+// / Decode incoming json request, and validate user email and password
+// / Compares hash password of the user, with given input password
+// / If any validation error occurs(wrong password etc.), we return 401.
+
 func (h *Handler) authenticationHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Email    string `json:"email"`

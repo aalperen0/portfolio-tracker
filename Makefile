@@ -23,11 +23,11 @@ confirm:
 
 # =====================================================================================
 
-## build/api: build the cmd/api application
-.PHONY: build/api
+## build/app: build the cmd/app application
+.PHONY: build/app
 build/api:
-	@echo 'Building cmd/api...'
-	@go build -o=./bin/api ./cmd/api
+	@echo 'Building cmd/app...'
+	@go build -o=./bin/app ./cmd/app
 
 
 

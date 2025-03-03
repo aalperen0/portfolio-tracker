@@ -18,21 +18,19 @@ import (
 
 type envelope map[string]any
 
-// /readID retrieve the "id" URL parameter from the current request context,
-// / then convert to a integer and return it. If the operation isn't successfull
-// / it returns 0 and and error
+// / readID retrieve the "id" URL parameter from the current request context,
+// / and  return it. If the operation isn't successfull, it returns empty string and error
 // # Parameters
-// @r: The incoming HTTP request
+// @ - r : The incoming HTTP request
 // / # Returns
 // / - error: Returns an error if retrieved id is invalid, otherwise returns nil
 
 func (h *Handler) readIDParam(r *http.Request) (string, error) {
-	params := httprouter.ParamsFromContext(r.Context())
-	id := params.ByName("id")
-	if id == "" {
+	paramID := httprouter.ParamsFromContext(r.Context()).ByName("id")
+	if paramID == "" {
 		return "", errors.New("invalid parameter")
 	}
-	return id, nil
+	return paramID, nil
 }
 
 func (h *Handler) writeJSON(

@@ -5,17 +5,21 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog"
 
+	"github.com/aalperen0/portfolio-tracker/internal/cache"
 	"github.com/aalperen0/portfolio-tracker/internal/validator"
 )
 
 type CoinModel struct {
-	DB  *sql.DB
-	RDB *redis.Client
+	DB     *sql.DB
+	RDB    *redis.Client
+	Cache  *cache.Cache
+	Logger zerolog.Logger
 }
 
 type Coin struct {
@@ -133,14 +137,22 @@ func (m CoinModel) GetAllCoinsForUser(
 	userID int64,
 	filters Filters,
 ) ([]*Coin, error) {
+	cacheKey := "user:coins:" + strconv.Itoa(int(userID))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	var cachedCoins []*Coin
+	found, err := m.Cache.Get(ctx, cacheKey, &cachedCoins)
+	if err == nil && found {
+		return cachedCoins, nil
+	}
+
 	query := fmt.Sprintf(`SELECT coin_id, symbol, amount, purchase_price_average, total_cost, pnl
               FROM coins
               WHERE (coin_id ILIKE $1 OR symbol ILIKE $1 or $1 = '') AND user_id = $2
               ORDER BY %s %s 
               LIMIT $3 OFFSET $4`, filters.SortColumn(), filters.SortDirection())
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
 
 	args := []any{coinID, userID, filters.Limit(), filters.Offset()}
 
@@ -198,7 +210,7 @@ func (m CoinModel) UpdateCoinsForUser(coin *Coin) error {
 
 	defer func() {
 		if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
-			log.Printf("rollback error: %v", err)
+			m.Logger.Err(err).Msg("rollback error")
 		}
 	}()
 
@@ -214,6 +226,13 @@ func (m CoinModel) UpdateCoinsForUser(coin *Coin) error {
 
 	// COMMIT ensures that all changes in a transaction are permanently saved,
 	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	//  After succesfull update invaliditing relevant caches
+	cacheKey := "user:coins:" + strconv.Itoa(int(coin.UserID))
+	err = m.Cache.Delete(ctx, cacheKey)
 	if err != nil {
 		return err
 	}
@@ -243,7 +262,7 @@ func (m CoinModel) EnqueuePNLUpdates() error {
 
 		err = m.RDB.RPush(ctx, "pnl_queue", coinID).Err()
 		if err != nil {
-			log.Printf("error pushing %s to redis %v", coinID, err)
+			m.Logger.Err(err).Msgf("error pushing %s to redis queue", coinID)
 		}
 
 	}
@@ -252,12 +271,6 @@ func (m CoinModel) EnqueuePNLUpdates() error {
 
 func (m CoinModel) UpdatePNLForCoin(coinID string, currentPrice float64) error {
 	ctx := context.Background()
-
-	// Check database connection
-	if err := m.DB.PingContext(ctx); err != nil {
-		log.Printf("database connection check failed: %v", err)
-		return err
-	}
 
 	// Fetch all holdings for the given coin
 	query := `SELECT user_id, amount, purchase_price_average FROM coins WHERE coin_id = $1`
@@ -283,9 +296,13 @@ func (m CoinModel) UpdatePNLForCoin(coinID string, currentPrice float64) error {
 		updateQuery := `UPDATE coins SET pnl = $1 WHERE coin_id = $2 AND user_id = $3`
 		_, err = m.DB.ExecContext(ctx, updateQuery, pnl, coinID, userID)
 		if err != nil {
-			log.Printf("failed to update PNL for user %d, coin %s: %v", userID, coinID, err)
+			m.Logger.Error().
+				Msgf("failed to update PNL for user %d, coin %s: %v", userID, coinID, err)
 			continue
 		}
+	}
+	if err := m.Cache.Invalidate(ctx, "user:coins:*"); err != nil {
+		m.Logger.Err(err).Msgf("failed to invalidate caches %v", err)
 	}
 
 	return rows.Err()

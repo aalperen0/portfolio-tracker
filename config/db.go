@@ -49,6 +49,13 @@ func InitDB(cfg *Config) (*sql.DB, error) {
 	return db, nil
 }
 
+// / Initalize redis connection, pinging redis to check connection
+// / is established, if after 10 seconds still not established, cancel
+// / process.
+// / # Return
+// / - redis: Returns redis driver
+// / - error: Returns error if connection couldnt established.
+
 func InitRedis(cfg *Config, logger zerolog.Logger) (*redis.Client, error) {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     cfg.Redis.Host,

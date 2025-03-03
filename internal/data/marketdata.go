@@ -1,13 +1,16 @@
 package data
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
+	"github.com/aalperen0/portfolio-tracker/internal/cache"
 	"github.com/aalperen0/portfolio-tracker/internal/validator"
 )
 
@@ -15,6 +18,7 @@ type Client struct {
 	apiKey     string
 	baseURL    string
 	httpClient *http.Client
+	cache      *cache.Cache
 }
 
 type CoinMarketData struct {
@@ -30,11 +34,12 @@ type CoinMarketData struct {
 	LastUpdated       string  `json:"last_updated"`
 }
 
-func NewCoinClient(apiKey string) *Client {
+func NewCoinClient(apiKey string, cache *cache.Cache) *Client {
 	return &Client{
 		apiKey:     apiKey,
 		baseURL:    "https://api.coingecko.com/api/v3",
 		httpClient: &http.Client{},
+		cache:      cache,
 	}
 }
 
@@ -95,7 +100,35 @@ func (c *Client) GetCoinMarkets(
 
 // ////////////////////////////////////////////
 
+// / If a coin stored in the cache, we retrieve coin price and coin symbol.
+// / Otherwise retrieve a coin from the CoinGecko api. If user retrieve a coin
+// / from the api, the function put the values to the cache for a 5 minute.
+// # Parameters
+// - coinID (string)
+// # Return
+// - price (float64)
+// - symbol(string)
+// - error(record not found)
+
 func (c *Client) GetCoinCurrentPriceAndSymbol(coinID string) (float64, string, error) {
+	ctx := context.Background()
+
+	if c.cache != nil {
+		cacheKey := "coin:price:" + coinID
+
+		type CachedData struct {
+			Price  float64 `json:"price"`
+			Symbol string  `json:"symbol"`
+		}
+
+		var cachedData CachedData
+		found, err := c.cache.Get(ctx, cacheKey, &cachedData)
+		if err == nil && found {
+			return cachedData.Price, cachedData.Symbol, nil
+		}
+
+	}
+
 	url := fmt.Sprintf("%s/coins/%s", c.baseURL, coinID)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -130,5 +163,23 @@ func (c *Client) GetCoinCurrentPriceAndSymbol(coinID string) (float64, string, e
 	if err != nil {
 		return 0, "", err
 	}
-	return response.MarketData.CurrentPrice.USD, response.Symbol, nil
+
+	price := response.MarketData.CurrentPrice.USD
+	symbol := response.Symbol
+
+	if c.cache != nil {
+		cachedData := struct {
+			Price  float64 `json:"price"`
+			Symbol string  `json:"symbol"`
+		}{
+			Price:  price,
+			Symbol: symbol,
+		}
+		err := c.cache.Set(ctx, "coin:price:"+coinID, cachedData, 5*time.Minute)
+		if err != nil {
+			return 0, "", err
+		}
+	}
+
+	return price, symbol, nil
 }
